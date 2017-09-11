@@ -1,10 +1,11 @@
+<!DOCTYPE html>
 <style>input[type=text]{width:20px}</style>
 
-<select id=webMidiSelect></select><br><br>
+<pre id=webMidiSelect>No Connection</pre><br><br>
 
 Synth Bend Range : <input id=pitchBendRange type=text value=3 oninput='window.bendRange=parseFloat(this.value)'><br><br>
 
-<input type=button value='Toggle calibration mode' onclick='toggleCalibrationMode();'>
+<input type=button value='Toggle calibration mode' onclick='toggleCalibrationMode();'><br><br>
 
 <div style="width:1024px;">
 <input type=text value=-3  oninput='window.bend1=parseFloat(this.value)'>
@@ -111,7 +112,6 @@ function dec_to_IEEE754(n){
   h = parseInt(f,2).toString(16).split('');
 
   return [parseInt(h[6]+h[7],16), parseInt(h[4]+h[5],16), parseInt(h[2]+h[3],16), parseInt(h[0]+h[1],16) ]
-//  return [ parseInt(h[0]+h[1],16), parseInt(h[2]+h[3],16), parseInt(h[4]+h[5],16), parseInt(h[6]+h[7],16)  ]
 }
 
 
@@ -213,58 +213,48 @@ drawTemp=function(d){ n=((d.data[2]<<7) + (d.data[1])); json.innerHTML = n + "("
 midiOut=null;
 midiIn=null;
 function populateMIDIInSelect() {
-  selectMIDI.options.length = 0;
-  
-  midiAccess.outputs.forEach( function(i) {
+  selectMIDI.innerHTML='No connection';
+  midiOut=null;
+  midiIn=null;
 
-    midiOut=i;
-    selectMIDI.appendChild(new Option(i.name,i.id,midiOut==i,midiOut==i));
-    
+  midiAccess.outputs.forEach( function(i) {
+    if ("Mini Pitchbend Joystick"==i.name) {
+      midiOut=i;
+      selectMIDI.innerHTML="Connected: " + i.name;
+    }
   });
 
   midiAccess.inputs.forEach( function(i) {
-    //selectMIDI.appendChild(new Option(i.name,i.id,midiIn==i,midiIn==i));
-    if (i.name == midiOut.name) midiIn=i;
+    if (midiOut && i.name == midiOut.name) midiIn=i;
   });
   if (midiIn) midiIn.onmidimessage = midiMessageReceived;
-  
-  //if (midiIn&&midiIn.state=="disconnected") selectMIDI.onchange();
+
 }
 
 window.addEventListener("load",function() {
   if (navigator.requestMIDIAccess) navigator.requestMIDIAccess({"sysex": true}).then( function(midi) {
        
     midiAccess = midi;
-
     (midi.onstatechange = populateMIDIInSelect)();
-    (selectMIDI.onchange = function() {
-       //if (midiIn) midiIn.onmidimessage = null;
-
-       //if (selectMIDI.options.length) midiIn = midiAccess.inputs.get(2)//(selectMIDI[selectMIDI.selectedIndex].value);
-       //if (midiIn) midiIn.onmidimessage = midiMessageReceived;
-    })();
-    //midiOut=midiAccess.outputs.get(0);
-
-    //midiOut.send( [ 0xB0, 101, 0, 0xB0, 100, 0, 0xB0, 6, 3 ] );
 
   });
 });
 
 function sendSysEx( data ){
 
-d = [ 0xF0, 0x12, 0x34 ]
+  d = [ 0xF0, 0x12, 0x34 ]
 
-for (var i=0;i<data.length;i+=2) {
-  
-  d.push(  (data[i]&0x80?1:0) + (data[i+1]&0x80?2:0) )
-  d.push( data[i]&0x7F )
-  d.push( data[i+1]&0x7F )
+  for (var i=0;i<data.length;i+=2) {
+    
+    d.push(  (data[i]&0x80?1:0) + (data[i+1]&0x80?2:0) )
+    d.push( data[i]&0x7F )
+    d.push( data[i+1]&0x7F )
 
-}
-d.push(0xF7);
-console.log(d);
+  }
+  d.push(0xF7);
+  console.log(d);
 
-midiOut.send( d );
+  midiOut.send( d );
 
 }
 
@@ -273,3 +263,6 @@ function toggleCalibrationMode(){
 }
 
 </script>
+<br><br><br><br>
+
+For instructions on how to use this tool, see <a href=https://mitxela.com/projects/tiny_joystick>here</a>.
