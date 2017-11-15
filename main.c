@@ -1,6 +1,5 @@
-/* Morse Code USB Keyboard
- * based on EasyLogger from Objective Development
- * mitxela.com/projects/morse_code_usb_keyboard_mk_ii
+/* Mini MIDI Pitchbend Joystick
+ * mitxela.com/projects/tiny_joystick
  */
 
 #include <avr/io.h>
