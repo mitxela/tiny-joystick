@@ -368,6 +368,7 @@ int main(void) {
 	int16_t	lastVal1=0;
 	int16_t	lastVal2=0;
   int16_t lastbend=8192;
+  uint8_t lastmod=0;
 
   eeprom_read_block(&bendAmount, eeFloatAddr, sizeof(bendAmount)); 
 	
@@ -415,6 +416,8 @@ int main(void) {
           int16_t bend1=0;
           int16_t bend2=0;
           int16_t bend=0;
+          uint8_t modulation=0;
+          
 
 
           if (val1 <=bendAmount.voltage[0] ) {
@@ -426,6 +429,8 @@ int main(void) {
               {if (bend1 > bendAmount.limit[0]) bend1=bendAmount.limit[0];}
 
           } else if (val1>=bendAmount.voltage[1]) {
+            modulation=1;
+
             bend1 = (bendAmount.voltage[1]-val1) *bendAmount.down; //2 semitones up
 
             if (bendAmount.limit[1]<0)
@@ -453,23 +458,43 @@ int main(void) {
 
           } else bend2=0;
 
-          bend = 8192 + (bend1 + bend2);
-          if (bend>16384) bend=16384;
-          else if (bend <0) bend=0; 
 
+          if (modulation) {
+              bend1 = ((bend1)>>6);
+              if (bend1<0) bend1=0;
+              else if (bend1>127) bend1=127;
 
+              midiMsg[i++]= 0x0B; // Cable Number, Code Index Number
+              midiMsg[i++]= 0xB0;
+              midiMsg[i++]= 1;
+              midiMsg[i++]= bend1&0x7F;
+              lastmod = midiMsg[i++];
 
-          if (lastbend!=bend) {
+              usbSetInterrupt(midiMsg, i);
 
-            midiMsg[i++]= 0x0E; // Cable Number, Code Index Number
-            midiMsg[i++]= 0xE0;
-            midiMsg[i++]= (bend)&0x7F;
-            midiMsg[i++]= (bend>>7)&0x7F;
+          } else {
+            if (lastmod!=0) { //Leaving modulation region, make sure it's left at zero
+              midiMsg[i++]= 0x0B;
+              midiMsg[i++]= 0xB0;
+              midiMsg[i++]= 1;
+              midiMsg[i++]= 0;
+              lastmod=0;
+            }
 
+            bend = 8192 + (bend1 + bend2);
+            if (bend>16384) bend=16384;
+            else if (bend <0) bend=0; 
 
+            if (lastbend!=bend || i) {
+              
+              midiMsg[i++]= 0x0E; // Cable Number, Code Index Number
+              midiMsg[i++]= 0xE0;
+              midiMsg[i++]= (bend)&0x7F;
+              midiMsg[i++]= (bend>>7)&0x7F;
 
-            usbSetInterrupt(midiMsg, i);
-            lastbend=bend;
+              usbSetInterrupt(midiMsg, i);
+              lastbend=bend;
+            }
           }
 
         } else if (mode==2) { //calibration mode
